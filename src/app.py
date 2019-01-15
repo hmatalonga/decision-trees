@@ -95,11 +95,10 @@ def partition(rows, question):
     return true_rows, false_rows
 
 
-def gini(rows):
-    """Calculate the Gini Impurity for a list of rows.
+def impurity(rows):
+    """Calculate the Impurity for a list of rows.
 
-    There are a few different ways to do this, I thought this one was
-    the most concise. See:
+    Based on this example:
     https://en.wikipedia.org/wiki/Decision_tree_learning#Gini_impurity
     """
     counts = class_counts(rows)
@@ -117,7 +116,7 @@ def info_gain(left, right, current_uncertainty):
     two child nodes.
     """
     p = float(len(left)) / (len(left) + len(right))
-    return current_uncertainty - p * gini(left) - (1 - p) * gini(right)
+    return current_uncertainty - p * impurity(left) - (1 - p) * impurity(right)
 
 
 def find_best_split(rows):
@@ -125,7 +124,7 @@ def find_best_split(rows):
     and calculating the information gain."""
     best_gain = 0  # keep track of the best information gain
     best_question = None  # keep train of the feature / value that produced it
-    current_uncertainty = gini(rows)
+    current_uncertainty = impurity(rows)
     n_features = len(rows[0]) - 1  # number of columns
 
     for col in range(n_features):  # for each feature
