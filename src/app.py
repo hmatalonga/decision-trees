@@ -263,10 +263,8 @@ def print_leaf(counts):
 
 
 if __name__ == '__main__':
-    loops = 10
-    verbose = False
     correct = 0
-    correct_avg = 0
+    verbose = False
     training_data, testing_data = split_data(data)
 
     my_tree = build_tree(training_data)
@@ -274,19 +272,16 @@ if __name__ == '__main__':
     if verbose:
         print_tree(my_tree)
 
-    for i in range(loops):
-        for row in testing_data:
-            prediction = classify(row, my_tree)
-            guess = list(prediction.keys())[0]
+    for row in testing_data:
+        prediction = classify(row, my_tree)
+        guess = list(prediction.keys())[0]
 
-            if verbose:
-                print("Actual: %s. Predicted: %s" %
-                      (row[-1], print_leaf(prediction)))
-            if row[-1] == guess:
-                correct += 1
-        print("Loop %s -> Correct guesses: %s" % (i, correct))
-        correct_avg += correct
-    print("Average correct guesses: %s", int(correct_avg / loops))
+        if verbose:
+            print("Actual: %s. Predicted: %s" %
+                  (row[-1], print_leaf(prediction)))
+        if row[-1] == guess:
+            correct += 1
+    print("Correct guesses: (%s/%s)" % (correct, len(testing_data)))
 
 # Next steps
 # - add support for missing (or unseen) attributes
