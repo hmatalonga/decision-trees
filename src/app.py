@@ -8,13 +8,21 @@ import csv
 from random import shuffle
 
 
+def to_num(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
 def import_dataset(filepath, delimiter=';'):
     """Import a csv file to a list."""
     with open(filepath, mode='r') as f:
         reader = csv.reader(f, delimiter=delimiter)
         data = list(reader)
         header = [b for a in data[0:1] for b in a]
-        return data[1:], header
+        data = list(map(lambda xs: list(map(to_num, xs)), data[1:]))
+        return data, header
 
 
 def split_data(data, partition=0.7):
@@ -45,7 +53,7 @@ def class_counts(rows):
 
 def is_numeric(value):
     """Test if a value is numeric."""
-    return isinstance(value, int) or isinstance(value, float)
+    return type(value) in (float, int)
 
 
 class Question:
@@ -95,52 +103,11 @@ def partition(rows, question):
     return true_rows, false_rows
 
 
-def P(val, pos):
-    N = sum(map(lambda x: x[1], pos))
-    return (val/N)
-
-
-def gini_index(x):
-    N = len(x)
-    try:
-        return (1-reduce(lambda a, b: (P(a[1], x)**2) + (P(b[1], x)**2), x)) / (N/(N-1))
-    except:
-        return 0
-
-
-def entropia(x):
-    N = len(x)
-    try:
-        return (-reduce(lambda a, b: P(a[1], x)*log(P(a[1], x), 2) + P(b[1], x)*log(P(b[1], x), 2), x)) * (1 / (log(N, 2)))
-    except:
-        return 0
-
-
-def missclassification(x):
-    N = len(x)
-    try:
-        return (1 - max(list(map(lambda l: P(l[1], x), x)))) / (N/(N-1))
-    except:
-        return 0
-
-
-def generalized_gini_index(x):
-    return missclassification(x)
-
-
-def MaxDiffNormalized(x):
-    N = len(x)
-    try:
-        X = (max(list(map(lambda l:  P(l[1], x) - (1 - P(l[1], x)), x)))) / N
-        return X + (0.5 * (1-X))
-    except:
-        return 0
-
-
 def impurity(rows):
     """Calculate the Impurity for a list of rows.
 
-    Based on this example:
+    There are a few different ways to do this, I thought this one was
+    the most concise. See:
     https://en.wikipedia.org/wiki/Decision_tree_learning#Gini_impurity
     """
 
@@ -160,10 +127,6 @@ def info_gain(left, right, current_uncertainty):
     """
     p = float(len(left)) / (len(left) + len(right))
     return current_uncertainty - p * impurity(left) - (1 - p) * impurity(right)
-
-
-def info_gain_iter(rows):
-    return missclassification(rows)
 
 
 def find_best_split(rows):
@@ -192,11 +155,8 @@ def find_best_split(rows):
 
             # Calculate the information gain from this split
             gain = info_gain(true_rows, false_rows, current_uncertainty)
-            # gain = info_gain_iter(rows)  # MaxDiffNormalized
 
             # You actually can use '>' instead of '>=' here
-            # but I wanted the tree to look a certain way for our
-            # toy dataset.
             if gain >= best_gain:
                 best_gain, best_question = gain, question
 
@@ -313,13 +273,56 @@ def print_leaf(counts):
 if __name__ == '__main__':
     correct = 0
     verbose = False
+    cross_validation = True
 
-    training_data, testing_data = split_data(data)
+    if cross_validation:
+        folds = 5
+        accuracy = 0.0
+
+        for i in range(folds):
+            training_data, testing_data = split_data(data)
+            print("Building tree...")
+            my_tree = build_tree(training_data)
+            if verbose:
+                print_tree(my_tree)
+            for row in testing_data:
+                prediction = classify(row, my_tree)
+                guess = list(prediction.keys())[0]
+
+                if verbose:
+                    print("Actual: %s. Predicted: %s" %
+                          (row[-1], print_leaf(prediction)))
+                if row[-1] == guess:
+                    correct += 1
+            print("Correct guesses: (%s/%s)" % (correct, len(testing_data)))
+            print("Accuracy: %.2f" % (correct * 100 / len(testing_data)))
+            accuracy += correct * 100 / len(testing_data)
+            correct = 0
+        print("Average Accuracy: %.2f" % (accuracy / folds))
+    else:
+        training_data, testing_data = split_data(data)
+        my_tree = build_tree(training_data)
+        if verbose:
+            print_tree(my_tree)
+
+        for row in testing_data:
+            prediction = classify(row, my_tree)
+            guess = list(prediction.keys())[0]
+
+            if verbose:
+                print("Actual: %s. Predicted: %s" %
+                      (row[-1], print_leaf(prediction)))
+            if row[-1] == guess:
+                correct += 1
+        print("Correct guesses: (%s/%s)" % (correct, len(testing_data)))
+        print("Accuracy: %.2f" % (correct * 100 / len(testing_data)))
+
+    # Prediction for whole dataset
     my_tree = build_tree(training_data)
     if verbose:
         print_tree(my_tree)
 
-    for row in testing_data:
+    for row in data:
         prediction = classify(row, my_tree)
         guess = list(prediction.keys())[0]
 
@@ -330,7 +333,6 @@ if __name__ == '__main__':
             correct += 1
     print("Correct guesses: (%s/%s)" % (correct, len(testing_data)))
     print("Accuracy: %.2f" % (correct * 100 / len(testing_data)))
-
 
 # Next steps
 # - add support for missing (or unseen) attributes

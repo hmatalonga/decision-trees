@@ -7,6 +7,8 @@ verify_ssl = true
 pylint = "*"
 autopep8 = "*"
 jupyter = "*"
+pandadocs = "*"
 
 [requires]
 python_version = "3.5"
+
